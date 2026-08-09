@@ -1,0 +1,139 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Anuncios - Panel de Control</title>
+    <link rel="stylesheet" href="{% static 'anuncios/style.css' %}">
+</head>
+<body>
+
+    <!-- Encabezado -->
+    <header class="header-sitio">
+        <div class="contenedor-header">
+            <a href="{% url 'inicio' %}" class="logo">📢 Mi Sitio de Anuncios</a>
+            <nav class="menu-navegacion">
+                <a href="{% url 'inicio' %}" class="link-nav">Inicio</a>
+                <a href="{% url 'mis_anuncios' %}" class="link-nav"><strong>Mis Anuncios</strong></a>
+                <a href="{% url 'crear_anuncio' %}" class="btn-publicar">+ Publicar Anuncio</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="contenedor-principal">
+        <h2>Panel de Gestión: Mis Anuncios</h2>
+        <p class="subtitulo">Consulta el estado, tiempo restante, datos de contacto y renueva la visibilidad de tus publicaciones.</p>
+
+        {% if not anuncios %}
+            <div class="alerta-vacio">
+                <p>Aún no has publicado ningún anuncio.</p>
+                <a href="{% url 'crear_anuncio' %}" class="btn-publicar">Crear mi primer anuncio</a>
+            </div>
+        {% else %}
+            <div class="tabla-contenedor">
+                <table class="tabla-mis-anuncios">
+                    <thead>
+                        <tr>
+                            <th>Imagen</th>
+                            <th>Título</th>
+                            <th>Contacto</th>
+                            <th>Estado</th>
+                            <th>Publicado hace</th>
+                            <th>Tiempo Restante</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for anuncio in anuncios %}
+                            <tr>
+                                <!-- Imagen miniatura -->
+                                <td>
+                                    {% if anuncio.imagen %}
+                                        <img src="{{ anuncio.imagen.url }}" alt="{{ anuncio.titulo }}" class="img-miniatura">
+                                    {% else %}
+                                        <img src="/static/img/no-disponible.png" class="img-miniatura" alt="Vista no disponible">
+                                    {% endif %}
+                                </td>
+
+                                <!-- Título y Precio -->
+                                <td>
+                                    <strong>{{ anuncio.titulo }}</strong><br>
+                                    <small class="text-muted">${{ anuncio.precio }}</small>
+                                </td>
+
+                                <!-- Contactos Directos -->
+                                <td>
+                                    {% if anuncio.whatsapp %}
+                                        <small>📱 <strong>WA:</strong> {{ anuncio.whatsapp }}</small><br>
+                                    {% endif %}
+                                    {% if anuncio.telegram %}
+                                        <small>✈️ <strong>TG:</strong> @{{ anuncio.telegram }}</small>
+                                    {% endif %}
+                                    {% if not anuncio.whatsapp and not anuncio.telegram %}
+                                        <small class="text-muted">Sin datos</small>
+                                    {% endif %}
+                                </td>
+
+                                <!-- Estado del Pago / Publicación -->
+                                <td>
+                                    {% if anuncio.pagado and anuncio.esta_vigente %}
+                                        <span class="badge badge-activo">Activo</span>
+                                    {% elif anuncio.pagado and not anuncio.esta_vigente %}
+                                        <span class="badge badge-vencido">Vencido</span>
+                                    {% else %}
+                                        <span class="badge badge-pendiente">Pendiente Pago</span>
+                                    {% endif %}
+                                </td>
+
+                                <!-- Tiempo Publicado -->
+                                <td>
+                                    {% if anuncio.fecha_pago %}
+                                        {{ anuncio.tiempo_publicado }}
+                                    {% else %}
+                                        <span class="text-muted">No publicado</span>
+                                    {% endif %}
+                                </td>
+
+                                <!-- Tiempo Restante -->
+                                <td>
+                                    {% if anuncio.pagado and anuncio.esta_vigente %}
+                                        ⏱️ {{ anuncio.tiempo_restante }}
+                                    {% elif anuncio.pagado and not anuncio.esta_vigente %}
+                                        ❌ Tiempo agotado
+                                    {% else %}
+                                        <span class="text-muted">--</span>
+                                    {% endif %}
+                                </td>
+
+                                <!-- Botones de Acción Corregidos -->
+                                <td>
+                                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                        {% if not anuncio.pagado %}
+                                            <!-- Paso 1: Pago inicial pendiente -->
+                                            <a href="{% url 'pasarela_pago' anuncio.id %}" class="btn-tabla btn-pagar">Pagar Anuncio</a>
+                                        {% elif not anuncio.esta_vigente %}
+                                            <!-- Paso 2: Anuncio vencido -> Renovar -->
+                                            <a href="{% url 'pasarela_pago' anuncio.id %}" class="btn-tabla btn-renovar">🔄 Renovar (30 días)</a>
+                                        {% else %}
+                                            <!-- Anuncio activo -> Ver detalle y Editar -->
+                                            <a href="{% url 'detalle_anuncio' anuncio.id %}" class="btn-tabla btn-ver-detalle">Ver Anuncio</a>
+                                            <a href="{% url 'editar_anuncio' anuncio.id %}" class="btn-tabla" style="background-color: #f39c12; color: white; text-decoration: none;">✏️ Editar</a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="pie-pagina">
+        <p>&copy; 2026 Mi Sitio de Anuncios. Todos los derechos reservados.</p>
+    </footer>
+
+</body>
+</html>

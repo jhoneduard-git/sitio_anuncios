@@ -1,0 +1,123 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sitio de Anuncios</title>
+    <link rel="stylesheet" href="{% static 'anuncios/style.css' %}">
+</head>
+<body>
+
+    <!-- Encabezado Principal -->
+    <header class="header-sitio">
+        <div class="contenedor-header">
+            <a href="{% url 'inicio' %}" class="logo">📢 Mi Sitio de Anuncios</a>
+            <nav class="menu-navegacion">
+                <a href="{% url 'inicio' %}" class="link-nav">Inicio</a>
+                
+                {% if user.is_authenticated %}
+                    <a href="{% url 'mis_anuncios' %}" class="link-nav">Mis Anuncios</a>
+                    
+                    <span style="color: white; margin-right: 10px;">Hola, <strong>{{ user.username }}</strong></span>
+                    <form action="{% url 'logout' %}" method="POST" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="link-nav" style="background: none; border: none; color: white; cursor: pointer;">Cerrar sesión</button>
+                    </form>
+                    <a href="{% url 'crear_anuncio' %}" class="btn-publicar">+ Publicar Anuncio</a>
+                {% else %}
+                    <a href="{% url 'login' %}" class="link-nav">Ingresar</a>
+                    <a href="{% url 'registro' %}" class="btn-publicar">Registrarse</a>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+
+    <!-- Contenido Principal -->
+    <main class="contenedor-principal">
+
+        <!-- 🆕 Zona de Buscador y Filtro por Categorías -->
+        <section class="zona-filtros">
+            <form method="GET" action="{% url 'inicio' %}" class="formulario-busqueda">
+                <input type="text" 
+                       name="q" 
+                       value="{{ buscar_texto }}" 
+                       placeholder="Buscar por título, descripción, categoría o precio máx..." 
+                       aria-label="¿Qué estás buscando?" 
+                       class="input-buscar">
+                
+<label for="select-categoria" class="visually-hidden">Categoría</label>
+<select name="categoria" id="select-categoria" class="select-categoria">
+    <option value="">Todas las categorías</option>
+    {% for cat in categorias %}
+        <option value="{{ cat.id }}" {% if categoria_id|add:0 == cat.id %}selected{% endif %}>
+            {{ cat.nombre }}
+        </option>
+    {% endfor %}
+</select>
+
+                <button type="submit" class="btn-buscar">Buscar</button>
+            </form>
+
+            <!-- Barra de Categorías Rápidas -->
+            <div class="barra-categorias">
+                <a href="{% url 'inicio' %}{% if buscar_texto %}?q={{ buscar_texto }}{% endif %}" class="tag-categoria {% if not categoria_id %}activa{% endif %}">Todas</a>
+                {% for cat in categorias %}
+                    <a href="{% url 'inicio' %}?categoria={{ cat.id }}{% if buscar_texto %}&q={{ buscar_texto }}{% endif %}" class="tag-categoria {% if categoria_id|add:0 == cat.id %}activa{% endif %}">
+                        {{ cat.nombre }}
+                    </a>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- Mensaje de Sin Resultados -->
+        {% if not anuncios %}
+            <p class="sin-resultados">No encontramos anuncios que coincidan con tu búsqueda. 😕</p>
+        {% endif %}
+
+        <!-- Grilla de Anuncios -->
+        <div class="grilla-anuncios">
+            {% for anuncio in anuncios %}
+                <div class="tarjeta-anuncio">
+                    <div class="contenedor-imagen">
+                        {% if anuncio.imagen %}
+                            <img src="{{ anuncio.imagen.url }}" alt="{{ anuncio.titulo }}">
+                        {% else %}
+                            <img src="casa.jpg" alt="Casa con jardín en un día soleado">
+                        {% endif %}
+                    </div>
+                    
+                    <div class="tarjeta-info">
+                        <div class="encabezado-tarjeta">
+                            <span class="categoria-badge">{{ anuncio.categoria.nombre }}</span>
+                            <span class="tiempo-badge" title="Tiempo activo">⏱️ {{ anuncio.tiempo_publicado }}</span>
+                        </div>
+                        
+                        <a href="{% url 'detalle_anuncio' anuncio.id %}" class="enlace-titulo">
+                            <h3>{{ anuncio.titulo }}</h3>
+                        </a>
+                        
+                        <p class="descripcion-corta">{{ anuncio.descripcion|truncatewords:12 }}</p>
+                        
+                        <div class="vigencia-info">
+                            <small class="text-muted">⏳ Quedan: <strong>{{ anuncio.tiempo_restante }}</strong></small>
+                        </div>
+
+                        <div class="tarjeta-pie">
+                            <span class="precio">${{ anuncio.precio }}</span>
+                            <a href="{% url 'detalle_anuncio' anuncio.id %}" class="btn-ver">Ver Más</a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </main>
+
+    <!-- Pie de Página -->
+    <footer class="pie-pagina">
+        <p>&copy; 2026 Sitio de Anuncios Publicitarios. Todos los derechos reservados.</p>
+        <p><a href="#">Información y reglas de uso</a> | <a href="#">Políticas de privacidad</a></p>
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Anuncios Clasificados{% endblock %}</title>
+    <!-- Estilos de Bootstrap 5 para un diseño moderno y responsivo -->
+   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+</head>
+<body class="bg-light">
+
+    <!-- BARRA DE NAVEGACIÓN COMÚN -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="{% url 'inicio' %}">📢 AnunciosApp</a>
+            <a href="{% url 'inicio' %}" class="link-nav">Inicio</a>
+            <div>
+                {% if user.is_authenticated %}
+                    <span class="text-light me-3">Hola, {{ user.username }}</span>
+                    <a href="{% url 'crear_anuncio' %}" class="btn btn-success btn-sm">+ Publicar Anuncio</a>
+                {% else %}
+                    <a href="{% url 'login' %}" class="btn btn-outline-light btn-sm me-2">Iniciar Sesión</a>
+                    <a href="{% url 'registrar' %}" class="btn btn-primary btn-sm">Registrarse</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- CONTENIDO DINÁMICO (Aquí se insertará cada vista) -->
+    <main class="container">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <!-- PIE DE PÁGINA COMÚN -->
+    <footer class="text-center text-muted py-4 mt-5 border-top">
+        <small>&copy; 2026 AnunciosApp - Todos los derechos reservados</small>
+    </footer>
+
+    <!-- Scripts de Bootstrap -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
+</body>
+</html>

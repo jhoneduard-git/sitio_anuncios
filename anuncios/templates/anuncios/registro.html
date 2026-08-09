@@ -1,0 +1,40 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - ClasificadosApp</title>
+    <link rel="stylesheet" href="{% static 'anuncios/style.css' %}">
+</head>
+<body>
+
+    <header class="header-sitio">
+        <div class="contenedor-header">
+            <a href="{% url 'inicio' %}" class="logo">📢 ClasificadosApp</a>
+            <a href="{% url 'inicio' %}" class="link-nav">Inicio</a>
+        </div>
+    </header>
+
+    <div class="contenedor-fluido-detalle" style="max-width: 500px; margin: 50px auto;">
+        <div class="tarjeta-info-superior">
+            <h2>Crear una Cuenta</h2>
+            <p style="color: #7f8c8d; margin-bottom: 20px;">Regístrate para comenzar a publicar tus anuncios.</p>
+
+            <form method="POST">
+                {% csrf_token %}
+                {{ form.as_p }}
+                
+                <button type="submit" class="btn-buscar-formulario" style="width: 100%; margin-top: 20px;">
+                    Completar Registro
+                </button>
+            </form>
+
+            <p style="margin-top: 20px; text-align: center;">
+                ¿Ya tienes una cuenta? <a href="{% url 'login' %}" style="color: #3498db; font-weight: bold;">Inicia sesión aquí</a>
+            </p>
+        </div>
+    </div>
+
+</body>
+</html>

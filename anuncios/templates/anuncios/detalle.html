@@ -1,0 +1,113 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalle - {{ anuncio.titulo }}</title>
+    <link rel="stylesheet" href="{% static 'anuncios/style.css' %}">
+</head>
+<body>
+
+    <!-- Encabezado Sincronizado con Autenticación -->
+    <header class="header-sitio">
+        <div class="contenedor-header">
+            <a href="{% url 'inicio' %}" class="logo">📢 ClasificadosApp</a>
+            <nav class="menu-navegacion">
+                <a href="{% url 'inicio' %}" class="link-nav">Inicio</a>
+                
+                {% if user.is_authenticated %}
+                    <a href="{% url 'mis_anuncios' %}" class="link-nav">Mis Anuncios</a>
+                    <span style="color: white; margin-right: 10px;">Hola, <strong>{{ user.username }}</strong></span>
+                    <form action="{% url 'logout' %}" method="POST" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="link-nav" style="background: none; border: none; color: white; cursor: pointer;">Cerrar sesión</button>
+                    </form>
+                    <a href="{% url 'crear_anuncio' %}" class="btn-publicar">+ Publicar Anuncio</a>
+                {% else %}
+                    <a href="{% url 'login' %}" class="link-nav">Ingresar</a>
+                    <a href="{% url 'registro' %}" class="btn-publicar">Registrarse</a>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+
+    <main class="contenedor-fluido-detalle">
+        
+        <!-- PARTE SUPERIOR: Tarjeta grande para la información y descripción -->
+        <div class="tarjeta-info-superior">
+            <div class="encabezado-producto">
+                <span class="categoria-etiqueta">{{ anuncio.categoria.nombre }}</span>
+                <h2>{{ anuncio.titulo }}</h2>
+                <p class="precio-grande">${{ anuncio.precio }}</p>
+            </div>
+
+            <!-- INFORMACIÓN DE VIGENCIA Y TIEMPO PUBLICADO -->
+            <div class="bloque-info-tiempo">
+                <p class="dato-tiempo">⏱️ <strong>Publicado hace:</strong> {{ anuncio.tiempo_publicado }}</p>
+                <p class="dato-tiempo">⏳ <strong>Vigencia restante:</strong> {{ anuncio.tiempo_restante }}</p>
+                <p class="dato-vendedor">👤 <strong>Anunciante:</strong> {{ anuncio.usuario.username }}</p>
+            </div>
+            
+            <div class="cuerpo-descripcion">
+                <h3>Descripción del Producto</h3>
+                <p class="texto-descripcion">{{ anuncio.descripcion|linebreaks }}</p>
+            </div>
+
+            <!-- BOTONES DE CONTACTO DINÁMICOS (WhatsApp y Telegram) -->
+            <div class="accion-contacto-grupo">
+                {% if anuncio.whatsapp %}
+                    <a href="https://wa.me/{{ anuncio.whatsapp }}?text=Hola,%20estoy%20interesado%20en:%20{{ anuncio.titulo|urlencode }}" 
+                       target="_blank" 
+                       rel="noopener noreferrer" 
+                       class="btn-contacto-base btn-whatsapp">
+                        💬 WhatsApp
+                    </a>
+                {% endif %}
+
+{% if anuncio.telegram %}
+    <a href="https://t.me/+{{ anuncio.telegram|cut:'+'|cut:' ' }}" 
+       target="_blank" 
+       rel="noopener noreferrer" 
+       class="btn-contacto-base btn-telegram">
+        ✈️ Telegram
+    </a>
+{% endif %}
+
+                {% if not anuncio.whatsapp and not anuncio.telegram %}
+                    <p class="text-muted"><small>El anunciante no especificó medios de contacto directo.</small></p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- PARTE INFERIOR: Cuadrícula de imágenes en 2 columnas de ancho completo -->
+        <div class="seccion-imagenes-mosaico">
+            <h3>Galería de Imágenes</h3>
+            <div class="grid-dos-columnas">
+                
+                <!-- Imagen 1: Foto Principal -->
+                {% if anuncio.imagen %}
+                    <div class="caja-mosaico-foto">
+                        <img src="{{ anuncio.imagen.url }}" alt="{{ anuncio.titulo }}">
+                    </div>
+                {% endif %}
+
+                <!-- Siguientes Imágenes: Fotos adicionales -->
+                {% for foto in fotos_adicionales %}
+                    <div class="caja-mosaico-foto">
+                        <img src="{{ foto.imagen.url }}" alt="Vista adicional de {{ anuncio.titulo }}">
+                    </div>
+                {% endfor %}
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer style="background-color: #2c3e50; color: white; text-align: center; padding: 20px; margin-top: 60px;">
+        <p>&copy; 2026 ClasificadosApp. Todos los derechos reservados.</p>
+    </footer>
+
+</body>
+</html>
