@@ -116,6 +116,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_REDIRECT_URL = 'inicio'
 LOGOUT_REDIRECT_URL = 'inicio'
 
-# Configuración Wompi (Cargada desde el archivo .env)
-WOMPI_PUBLIC_KEY = config('WOMPI_PUBLIC_KEY', default='pub_test_XXXXX')
-WOMPI_INTEGRITY_SECRET = config('WOMPI_INTEGRITY_SECRET', default='prod_integrity_XXXXX')
+# Configuración Wompi (Cargada desde .env)
+WOMPI_PUBLIC_KEY = config('WOMPI_PUBLIC_KEY')
+WOMPI_INTEGRITY_SECRET = config('WOMPI_INTEGRITY_SECRET')

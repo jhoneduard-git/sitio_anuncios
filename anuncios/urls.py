@@ -17,6 +17,7 @@ urlpatterns = [
     path('pago/<int:anuncio_id>/', views.pasarela_pago, name='pasarela_pago'),
     path('respuesta-pago/', views.respuesta_pago, name='respuesta_pago'),  # 👈 OBLIGATORIA PARA WOMPI
     
+
     # Rutas del sistema de autenticación de usuarios
     path('registro/', views.registrar_usuario, name='registro'),
     path('login/', auth_views.LoginView.as_view(template_name='anuncios/login.html'), name='login'),

@@ -1,0 +1,51 @@
+{% extends 'anuncios/base.html' %}
+
+{% block title %}Resultado del Pago - {{ anuncio.titulo }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center my-5">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm p-4 text-center border-0 rounded-3">
+            
+            {% if estado == 'APPROVED' %}
+                <div class="mb-3 text-success">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" class="bi bi-check-circle-fill" viewBox="0 0 16 16">
+                        <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l5-5.25a.75.75 0 0 0-.012-1.038z"/>
+                    </svg>
+                </div>
+                <h3 class="fw-bold text-dark mb-2">¡Pago Aprobado!</h3>
+                <p class="text-muted">
+                    Tu anuncio <strong>"{{ anuncio.titulo }}"</strong> ha sido activado correctamente y ya está publicado.
+                </p>
+            {% else %}
+                <div class="mb-3 text-danger">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" class="bi bi-x-circle-fill" viewBox="0 0 16 16">
+                        <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293 5.354 4.646z"/>
+                    </svg>
+                </div>
+                <h3 class="fw-bold text-dark mb-2">Pago No Completado</h3>
+                <p class="text-muted">
+                    El estado de la transacción fue: <strong>{{ estado }}</strong>. El anuncio no se ha activado.
+                </p>
+            {% endif %}
+
+            <div class="bg-light p-3 rounded-3 my-3 text-start border small">
+                <p class="mb-1"><strong>Referencia:</strong> {{ transaccion.reference }}</p>
+                <p class="mb-1"><strong>ID Transacción:</strong> {{ transaccion.id }}</p>
+                <p class="mb-1"><strong>Monto:</strong> ${{ transaccion.amount_in_cents|slice:":-2" }} COP</p>
+                <p class="mb-0"><strong>Método de pago:</strong> {{ transaccion.payment_method_type }}</p>
+            </div>
+
+            <div class="d-grid gap-2 mt-4">
+                {% if estado == 'APPROVED' %}
+                    <a href="{% url 'mis_anuncios' %}" class="btn btn-primary">Ver mis anuncios</a>
+                {% else %}
+                    <a href="{% url 'pasarela_pago' anuncio.id %}" class="btn btn-warning">Intentar pagar de nuevo</a>
+                    <a href="{% url 'mis_anuncios' %}" class="btn btn-outline-secondary btn-sm">Volver a mis anuncios</a>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

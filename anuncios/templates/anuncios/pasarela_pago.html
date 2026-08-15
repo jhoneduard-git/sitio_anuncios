@@ -18,19 +18,18 @@
             </div>
 
             <p class="fw-semibold text-secondary mb-3">Haz clic en el botón para abrir la pasarela de Wompi:</p>
-
+                  
             <!-- FORMULARIO WIDGET OFICIAL DE WOMPI -->
             <form class="d-flex justify-content-center">
-                <script
-                    src="https://checkout.wompi.co/widget.js"
-                    data-render="button"
-                    data-public-key="{{ wompi_public_key }}"
-                    data-currency="COP"
-                    data-amount-in-cents="{{ monto_centavos }}"
-                    data-reference="{{ referencia_pago }}"
-                    data-redirect-url="http://127.0.0.1:8000/respuesta-pago/"
-                    data-customer-data:email="{{ request.user.email }}">
-                </script>
+                <script 
+                   src="https://checkout.wompi.co/widget.js"
+                   data-render="button"
+                   data-public-key="{{ wompi_public_key }}"
+                   data-currency="COP"
+                   data-amount-in-cents="{{ monto_centavos }}"
+                   data-reference="{{ referencia_pago }}"
+                   data-signature:integrity="{{ firma_integridad }}"
+                ></script>
             </form>
 
             <div class="mt-4 pt-2 border-top">

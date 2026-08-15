@@ -969,3 +969,127 @@ h1 {
         white-space: nowrap; /* Evita que el texto del tag se rompa */
     }
 }
+/* ==========================================
+   ESTILOS PARA EL AVISO DE VERIFICACIÓN DE EDAD
+   ========================================== */
+
+/* Fondo oscuro que cubre toda la pantalla */
+.age-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.92);
+    backdrop-filter: blur(8px);
+    z-index: 999999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Caja/Tarjeta contenedora del mensaje */
+.age-modal {
+    background-color: #1e1e24;
+    color: #ffffff;
+    padding: 2.5rem;
+    border-radius: 16px;
+    text-align: center;
+    max-width: 420px;
+    width: 90%;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+    border: 1px solid #333333;
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+.age-icon {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+}
+
+.age-modal h2 {
+    color: #ff4757;
+    margin-top: 0;
+    margin-bottom: 0.8rem;
+    font-size: 1.6rem;
+    font-weight: bold;
+}
+
+.age-modal p {
+    color: #e0e0e0;
+    font-size: 1rem;
+    line-height: 1.4;
+    margin-bottom: 0.5rem;
+}
+
+.age-modal p.subtexto {
+    color: #a0a0a0;
+    font-size: 0.88rem;
+    margin-bottom: 1.8rem;
+}
+
+/* Botones de acción */
+.age-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.btn-enter {
+    background-color: #2ed573;
+    color: #ffffff;
+    border: none;
+    padding: 14px 20px;
+    font-size: 1rem;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-enter:hover {
+    background-color: #26af5f;
+    transform: translateY(-1px);
+}
+
+.btn-exit {
+    background-color: transparent;
+    color: #ff4757;
+    border: 1px solid #ff4757;
+    padding: 12px 20px;
+    font-size: 0.95rem;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.btn-exit:hover {
+    background-color: #ff4757;
+    color: #ffffff;
+}
+/* Enlaces legales dentro del modal de edad */
+.age-legal-links {
+    margin-bottom: 1.5rem;
+    font-size: 0.85rem;
+    color: #a0a0a0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+.age-legal-links a {
+    color: #00a8ff;
+    text-decoration: none;
+    transition: color 0.2s ease, text-decoration 0.2s ease;
+}
+
+.age-legal-links a:hover {
+    color: #70a1ff;
+    text-decoration: underline;
+}
+
+.age-legal-links span {
+    color: #555555;
+}

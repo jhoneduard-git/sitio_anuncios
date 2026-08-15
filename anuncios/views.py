@@ -1,18 +1,20 @@
+import hashlib
 import requests
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models import Q
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django.utils import timezone
 from django.contrib import messages
 from django.conf import settings
 from .models import Anuncio, Categoria, ImagenAnuncio
 
 
-# 1. VISTA DE LA PÁGINA DE INICIO (Con Búsqueda Multipropósito y Vigencia)
+# 1. PÁGINA DE INICIO (Solo GET)
+@require_GET
 def pagina_inicio(request):
-    # Traemos anuncios que estén marcados como pagados y tengan fecha de pago
     anuncios_base = Anuncio.objects.filter(
         pagado=True, 
         fecha_pago__isnull=False
@@ -21,7 +23,6 @@ def pagina_inicio(request):
     buscar_texto = request.GET.get('q', '').strip()
     categoria_id = request.GET.get('categoria', '').strip()
 
-    # 🔍 BÚSQUEDA MULTIPROPÓSITO (Título, Descripción, Categoría y Precio)
     if buscar_texto:
         filtro = (
             Q(titulo__icontains=buscar_texto) | 
@@ -29,22 +30,18 @@ def pagina_inicio(request):
             Q(categoria__nombre__icontains=buscar_texto)
         )
         
-        # Si el usuario ingresó un número, buscamos precios menores o iguales
         try:
             precio_val = float(buscar_texto)
             filtro |= Q(precio__lte=precio_val)
         except ValueError:
-            pass  # No era un número, ignoramos el filtro de precio
+            pass
 
         anuncios_base = anuncios_base.filter(filtro)
 
-    # 🏷️ Filtro por selector de Categoría
     if categoria_id:
         anuncios_base = anuncios_base.filter(categoria_id=categoria_id)
 
-    # ⏱️ Filtro de vigencia en memoria
     anuncios_activos = [anuncio for anuncio in anuncios_base if anuncio.esta_vigente]
-
     categorias = Categoria.objects.all() 
 
     contexto = {
@@ -56,7 +53,8 @@ def pagina_inicio(request):
     return render(request, 'anuncios/inicio.html', contexto)
 
 
-# 2. VISTA DE DETALLE DEL ANUNCIO
+# 2. DETALLE DE ANUNCIO (Solo GET)
+@require_GET
 def detalle_anuncio(request, id):
     anuncio_encontrado = get_object_or_404(Anuncio, id=id)
     fotos_adicionales = anuncio_encontrado.imagenes_adicionales.all()
@@ -68,8 +66,9 @@ def detalle_anuncio(request, id):
     return render(request, 'anuncios/detalle.html', contexto)
 
 
-# 3. VISTA PARA PUBLICAR UN NUEVO ANUNCIO (Captura datos completos y redirige a Pago)
+# 3. CREAR ANUNCIO (GET / POST)
 @login_required
+@require_http_methods(["GET", "POST"])
 def crear_anuncio(request):
     if request.method == 'POST':
         titulo = request.POST.get('titulo')
@@ -78,13 +77,11 @@ def crear_anuncio(request):
         categoria_id = request.POST.get('categoria')
         imagen = request.FILES.get('imagen')
         
-        # 🆕 Captura de contactos de WhatsApp y Telegram
         whatsapp = request.POST.get('whatsapp', '').strip()
         telegram = request.POST.get('telegram', '').strip()
 
         categoria = get_object_or_404(Categoria, id=categoria_id)
 
-        # Creación del anuncio base
         nuevo_anuncio = Anuncio.objects.create(
             titulo=titulo,
             descripcion=descripcion,
@@ -97,7 +94,6 @@ def crear_anuncio(request):
             pagado=False
         )
 
-        # 🆕 Procesamiento de imágenes adicionales múltiples
         fotos_adicionales = request.FILES.getlist('imagenes_adicionales')
         for foto in fotos_adicionales:
             ImagenAnuncio.objects.create(anuncio=nuevo_anuncio, imagen=foto)
@@ -108,22 +104,28 @@ def crear_anuncio(request):
     return render(request, 'anuncios/crear_anuncio.html', {'categorias': categorias})
 
 
-# 4. PASARELA DE PAGO CON WOMPI (Preparación del cobro)
+# 4. PASARELA DE PAGO (Limpia espacios y calcula la firma SHA-256)
 @login_required
+@require_GET
 def pasarela_pago(request, anuncio_id):
     anuncio = get_object_or_404(Anuncio, id=anuncio_id, usuario=request.user)
     
-    # Valor en COP por la publicación ($5.000 COP)
     monto_cop = 5000 
-    
-    # Wompi requiere el valor convertido a centavos (multiplicado por 100)
     monto_centavos = int(monto_cop * 100)
-    
-    # Generamos una referencia única para la transacción
+    moneda = "COP"  # Strictamente en mayúsculas
     referencia_pago = f"ANUNCIO-{anuncio.id}-{anuncio.usuario.id}"
     
-    # Llave pública tomada de settings.py (o valor por defecto de pruebas de Wompi)
-    wompi_public_key = getattr(settings, 'WOMPI_PUBLIC_KEY', 'pub_test_XXXXX')
+    # 🔑 Llave pública sin espacios alrededor
+    wompi_public_key = str(getattr(settings, 'WOMPI_PUBLIC_KEY', '')).strip()
+    
+    # 🔒 Secreto de Integridad sin espacios alrededor
+    secreto_integridad = str(getattr(settings, 'WOMPI_INTEGRITY_SECRET', '')).strip()
+    
+    # 🔗 Concatenación estricta de Wompi: Referencia + MontoEnCentavos + Moneda + Secreto
+    cadena_a_encriptar = f"{referencia_pago}{monto_centavos}{moneda}{secreto_integridad}"
+    
+    # Generar Hash SHA-256
+    firma_integridad = hashlib.sha256(cadena_a_encriptar.encode('utf-8')).hexdigest()
 
     contexto = {
         'anuncio': anuncio,
@@ -131,48 +133,62 @@ def pasarela_pago(request, anuncio_id):
         'monto_centavos': monto_centavos,
         'referencia_pago': referencia_pago,
         'wompi_public_key': wompi_public_key,
+        'firma_integridad': firma_integridad,
     }
     return render(request, 'anuncios/pasarela_pago.html', contexto)
 
 
-# 5. RESPUESTA Y CONFIRMACIÓN DE PAGO WOMPI
+# 5. RESPUESTA Y CONFIRMACIÓN DE PAGO WOMPI (Solo GET)
+@require_GET
 def respuesta_pago(request):
     id_transaccion = request.GET.get('id')
     
-    if id_transaccion:
-        # Consultamos el estado de la transacción directamente a Wompi Sandbox
-        url_wompi = f"https://sandbox.wompi.co/v1/transactions/{id_transaccion}"
-        try:
-            response = requests.get(url_wompi, timeout=10)
-            if response.status_code == 200:
-                data = response.json().get('data', {})
-                estado = data.get('status')       # Ej: APPROVED, DECLINED, VOIDED
-                referencia = data.get('reference') # Ej: ANUNCIO-15-2
-                
-                if estado == 'APPROVED':
-                    try:
-                        # Extraemos el ID del anuncio desde la referencia (ANUNCIO-{id}-{usuario})
-                        anuncio_id = referencia.split('-')[1]
-                        anuncio = Anuncio.objects.get(id=anuncio_id)
-                        
-                        # Marcamos como pagado y registramos la fecha actual
-                        anuncio.pagado = True
-                        anuncio.fecha_pago = timezone.now()
-                        anuncio.save()
-                        
-                        messages.success(request, "¡Pago aprobado con éxito! Tu anuncio ha sido publicado.")
-                        return redirect('detalle_anuncio', id=anuncio.id)
-                    except (IndexError, Anuncio.DoesNotExist):
-                        messages.error(request, "No se encontró el anuncio correspondiente al pago.")
-                else:
-                    messages.warning(request, f"El pago no fue aprobado. Estado: {estado}")
-        except requests.RequestException:
-            messages.error(request, "Ocurrió un error al verificar la transacción con Wompi.")
+    if not id_transaccion:
+        messages.error(request, "No se proporcionó ningún ID de transacción.")
+        return redirect('mis_anuncios')
+        
+    pub_key = getattr(settings, 'WOMPI_PUBLIC_KEY', '')
+    base_url = "https://checkout.wompi.co/v1" if pub_key.startswith("pub_prod_") else "https://sandbox.wompi.co/v1"
+    
+    url_wompi = f"{base_url}/transactions/{id_transaccion}"
+    
+    try:
+        response = requests.get(url_wompi, timeout=10)
+        if response.status_code == 200:
+            data = response.json().get('data', {})
+            estado = data.get('status')
+            referencia = data.get('reference')
             
+            try:
+                anuncio_id = referencia.split('-')[1]
+                anuncio = Anuncio.objects.get(id=anuncio_id)
+            except (IndexError, ValueError, Anuncio.DoesNotExist):
+                messages.error(request, "No se encontró el anuncio correspondiente al pago.")
+                return redirect('mis_anuncios')
+
+            if estado == 'APPROVED':
+                if not anuncio.pagado:
+                    anuncio.pagado = True
+                    anuncio.fecha_pago = timezone.now()
+                    anuncio.save()
+                messages.success(request, f"¡Pago aprobado con éxito! Tu anuncio '{anuncio.titulo}' ha sido publicado.")
+            else:
+                messages.warning(request, f"El pago no fue completado. Estado: {estado}")
+
+            return render(request, 'anuncios/respuesta_pago.html', {
+                'estado': estado,
+                'anuncio': anuncio,
+                'transaccion': data
+            })
+            
+    except requests.RequestException:
+        messages.error(request, "Ocurrió un error al verificar la transacción con Wompi.")
+        
     return redirect('mis_anuncios')
 
 
-# 6. VISTA DE REGISTRO DE USUARIOS
+# 6. REGISTRO DE USUARIOS (GET / POST)
+@require_http_methods(["GET", "POST"])
 def registrar_usuario(request):
     if request.method == 'POST':
         form = UserCreationForm(request.POST)
@@ -186,43 +202,36 @@ def registrar_usuario(request):
     return render(request, 'anuncios/registro.html', {'form': form})
 
 
-# 7. VISTA: PANEL 'MIS ANUNCIOS' DEL USUARIO
+# 7. PANEL 'MIS ANUNCIOS' (Solo GET)
 @login_required
+@require_GET
 def mis_anuncios(request):
     anuncios_usuario = Anuncio.objects.filter(usuario=request.user).order_by('-id')
-
-    contexto = {
-        'anuncios': anuncios_usuario
-    }
-    return render(request, 'anuncios/mis_anuncios.html', contexto)
+    return render(request, 'anuncios/mis_anuncios.html', {'anuncios': anuncios_usuario})
 
 
-# 8. VISTA PARA EDITAR ANUNCIO PAGADO
+# 8. EDITAR ANUNCIO PAGADO (GET / POST)
 @login_required
+@require_http_methods(["GET", "POST"])
 def editar_anuncio(request, id):
-    # Obtenemos el anuncio verificando que pertenezca al usuario Y esté pagado
     anuncio = get_object_or_404(Anuncio, id=id, usuario=request.user, pagado=True)
 
     if request.method == 'POST':
-        # Actualizar datos de texto y contactos
         anuncio.titulo = request.POST.get('titulo')
         anuncio.descripcion = request.POST.get('descripcion')
         anuncio.precio = request.POST.get('precio')
         anuncio.whatsapp = request.POST.get('whatsapp', '').strip()
         anuncio.telegram = request.POST.get('telegram', '').strip()
         
-        # Actualizar categoría si se cambió
         categoria_id = request.POST.get('categoria')
         if categoria_id:
             anuncio.categoria = get_object_or_404(Categoria, id=categoria_id)
 
-        # Actualizar foto principal (si el usuario subió una nueva)
         if request.FILES.get('imagen'):
             anuncio.imagen = request.FILES.get('imagen')
 
         anuncio.save()
 
-        # Procesar fotos adicionales (si subió más imágenes)
         fotos_nuevas = request.FILES.getlist('imagenes_adicionales')
         for foto in fotos_nuevas:
             ImagenAnuncio.objects.create(anuncio=anuncio, imagen=foto)
@@ -240,8 +249,9 @@ def editar_anuncio(request, id):
     return render(request, 'anuncios/editar_anuncio.html', contexto)
 
 
-# 9. VISTA PARA ELIMINAR UNA FOTO ADICIONAL
+# 9. ELIMINAR FOTO ADICIONAL (Exclusivamente POST)
 @login_required
+@require_POST
 def eliminar_foto(request, foto_id):
     foto = get_object_or_404(ImagenAnuncio, id=foto_id, anuncio__usuario=request.user)
     anuncio_id = foto.anuncio.id

@@ -9,6 +9,31 @@
 </head>
 <body>
 
+    <!-- 🔞 MODAL DE VERIFICACIÓN DE EDAD -->
+<div id="age-verification-overlay" class="age-overlay">
+    <div class="age-modal">
+        <div class="age-icon">🔞</div>
+        <h2>Advertencia de Contenido</h2>
+        <p>Este sitio web contiene material exclusivo para adultos.</p>
+        <p class="subtexto">Para ingresar debes confirmar que tienes la edad legal requerida.</p>
+
+        <!-- 🔗 ENLACES A NORMAS Y POLÍTICAS -->
+        <div class="age-legal-links">
+            <a href="#" target="_blank">Normas de uso</a>
+            <span>|</span>
+            <a href="#" target="_blank">Políticas de privacidad</a>
+        </div>
+        
+        <div class="age-buttons">
+            <button id="btn-enter" onclick="confirmAge()" class="btn-enter">
+                Tengo 18 años o más (Entrar)
+            </button>
+            <button id="btn-exit" onclick="exitSite()" class="btn-exit">
+                Soy menor de 18 años (Salir)
+            </button>
+        </div>
+    </div>
+</div>
     <!-- Encabezado Principal -->
     <header class="header-sitio">
         <div class="contenedor-header">
@@ -46,15 +71,15 @@
                        aria-label="¿Qué estás buscando?" 
                        class="input-buscar">
                 
-<label for="select-categoria" class="visually-hidden">Categoría</label>
-<select name="categoria" id="select-categoria" class="select-categoria">
-    <option value="">Todas las categorías</option>
-    {% for cat in categorias %}
-        <option value="{{ cat.id }}" {% if categoria_id|add:0 == cat.id %}selected{% endif %}>
-            {{ cat.nombre }}
-        </option>
-    {% endfor %}
-</select>
+                <label for="select-categoria" class="visually-hidden">Categoría</label>
+                <select name="categoria" id="select-categoria" class="select-categoria">
+                    <option value="">Todas las categorías</option>
+                    {% for cat in categorias %}
+                        <option value="{{ cat.id }}" {% if categoria_id|add:0 == cat.id %}selected{% endif %}>
+                            {{ cat.nombre }}
+                        </option>
+                    {% endfor %}
+                </select>
 
                 <button type="submit" class="btn-buscar">Buscar</button>
             </form>
@@ -119,5 +144,22 @@
         <p><a href="#">Información y reglas de uso</a> | <a href="#">Políticas de privacidad</a></p>
     </footer>
 
+    <!-- LÓGICA DE VERIFICACIÓN DE EDAD -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            if (localStorage.getItem("isAdultConfirmed") === "true") {
+                document.getElementById("age-verification-overlay").style.display = "none";
+            }
+        });
+
+        function confirmAge() {
+            localStorage.setItem("isAdultConfirmed", "true");
+            document.getElementById("age-verification-overlay").style.display = "none";
+        }
+
+        function exitSite() {
+            window.location.href = "https://www.google.com";
+        }
+    </script>
 </body>
 </html>
