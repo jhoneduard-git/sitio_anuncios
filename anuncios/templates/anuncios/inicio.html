@@ -9,41 +9,39 @@
 </head>
 <body>
 
-    <!-- 🔞 MODAL DE VERIFICACIÓN DE EDAD -->
-<div id="age-verification-overlay" class="age-overlay">
-    <div class="age-modal">
-        <div class="age-icon">🔞</div>
-        <h2>Advertencia de Contenido</h2>
-        <p>Este sitio web contiene material exclusivo para adultos.</p>
-        <p class="subtexto">Para ingresar debes confirmar que tienes la edad legal requerida.</p>
+    <div id="age-verification-overlay" class="age-overlay">
+        <div class="age-modal">
+            <div class="age-icon">🔞</div>
+            <h2>Advertencia de Contenido</h2>
+            <p>Este sitio web contiene material exclusivo para adultos.</p>
+            <p class="subtexto">Para ingresar debes confirmar que tienes la edad legal requerida.</p>
 
-        <!-- 🔗 ENLACES A NORMAS Y POLÍTICAS -->
-        <div class="age-legal-links">
-            <a href="#" target="_blank">Normas de uso</a>
-            <span>|</span>
-            <a href="#" target="_blank">Políticas de privacidad</a>
-        </div>
-        
-        <div class="age-buttons">
-            <button id="btn-enter" onclick="confirmAge()" class="btn-enter">
-                Tengo 18 años o más (Entrar)
-            </button>
-            <button id="btn-exit" onclick="exitSite()" class="btn-exit">
-                Soy menor de 18 años (Salir)
-            </button>
+            <div class="age-legal-links">
+                <a href="{% url 'normas_uso' %}" target="_blank">Normas de uso</a>
+                <span>|</span>
+                <a href="{% url 'politicas_privacidad' %}" target="_blank">Políticas de privacidad</a>
+            </div>
+
+            <div class="age-buttons">
+                <button id="btn-enter" onclick="confirmAge()" class="btn-enter">
+                    Tengo 18 años o más (Entrar)
+                </button>
+                <button id="btn-exit" onclick="exitSite()" class="btn-exit">
+                    Soy menor de 18 años (Salir)
+                </button>
+            </div>
         </div>
     </div>
-</div>
-    <!-- Encabezado Principal -->
+
     <header class="header-sitio">
         <div class="contenedor-header">
             <a href="{% url 'inicio' %}" class="logo">📢 Mi Sitio de Anuncios</a>
             <nav class="menu-navegacion">
                 <a href="{% url 'inicio' %}" class="link-nav">Inicio</a>
-                
+
                 {% if user.is_authenticated %}
                     <a href="{% url 'mis_anuncios' %}" class="link-nav">Mis Anuncios</a>
-                    
+
                     <span style="color: white; margin-right: 10px;">Hola, <strong>{{ user.username }}</strong></span>
                     <form action="{% url 'logout' %}" method="POST" style="display: inline;">
                         {% csrf_token %}
@@ -58,10 +56,8 @@
         </div>
     </header>
 
-    <!-- Contenido Principal -->
     <main class="contenedor-principal">
 
-        <!-- 🆕 Zona de Buscador y Filtro por Categorías -->
         <section class="zona-filtros">
             <form method="GET" action="{% url 'inicio' %}" class="formulario-busqueda">
                 <input type="text" 
@@ -70,7 +66,7 @@
                        placeholder="Buscar por título, descripción, categoría o precio máx..." 
                        aria-label="¿Qué estás buscando?" 
                        class="input-buscar">
-                
+
                 <label for="select-categoria" class="visually-hidden">Categoría</label>
                 <select name="categoria" id="select-categoria" class="select-categoria">
                     <option value="">Todas las categorías</option>
@@ -84,7 +80,6 @@
                 <button type="submit" class="btn-buscar">Buscar</button>
             </form>
 
-            <!-- Barra de Categorías Rápidas -->
             <div class="barra-categorias">
                 <a href="{% url 'inicio' %}{% if buscar_texto %}?q={{ buscar_texto }}{% endif %}" class="tag-categoria {% if not categoria_id %}activa{% endif %}">Todas</a>
                 {% for cat in categorias %}
@@ -95,12 +90,10 @@
             </div>
         </section>
 
-        <!-- Mensaje de Sin Resultados -->
         {% if not anuncios %}
             <p class="sin-resultados">No encontramos anuncios que coincidan con tu búsqueda. 😕</p>
         {% endif %}
 
-        <!-- Grilla de Anuncios -->
         <div class="grilla-anuncios">
             {% for anuncio in anuncios %}
                 <div class="tarjeta-anuncio">
@@ -108,22 +101,22 @@
                         {% if anuncio.imagen %}
                             <img src="{{ anuncio.imagen.url }}" alt="{{ anuncio.titulo }}">
                         {% else %}
-                            <img src="casa.jpg" alt="Casa con jardín en un día soleado">
+                            <img src="{% static 'anuncios/img/default.jpg' %}" alt="Sin imagen disponible">
                         {% endif %}
                     </div>
-                    
+
                     <div class="tarjeta-info">
                         <div class="encabezado-tarjeta">
                             <span class="categoria-badge">{{ anuncio.categoria.nombre }}</span>
                             <span class="tiempo-badge" title="Tiempo activo">⏱️ {{ anuncio.tiempo_publicado }}</span>
                         </div>
-                        
+
                         <a href="{% url 'detalle_anuncio' anuncio.id %}" class="enlace-titulo">
                             <h3>{{ anuncio.titulo }}</h3>
                         </a>
-                        
+
                         <p class="descripcion-corta">{{ anuncio.descripcion|truncatewords:12 }}</p>
-                        
+
                         <div class="vigencia-info">
                             <small class="text-muted">⏳ Quedan: <strong>{{ anuncio.tiempo_restante }}</strong></small>
                         </div>
@@ -138,22 +131,16 @@
         </div>
     </main>
 
-    <!-- Pie de Página -->
     <footer class="pie-pagina">
         <p>&copy; 2026 Sitio de Anuncios Publicitarios. Todos los derechos reservados.</p>
-        <p><a href="#">Información y reglas de uso</a> | <a href="#">Políticas de privacidad</a></p>
+        <p>
+            <a href="{% url 'normas_uso' %}" target="_blank">Información y reglas de uso</a> | 
+            <a href="{% url 'politicas_privacidad' %}" target="_blank">Políticas de privacidad</a>
+        </p>
     </footer>
 
-    <!-- LÓGICA DE VERIFICACIÓN DE EDAD -->
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            if (localStorage.getItem("isAdultConfirmed") === "true") {
-                document.getElementById("age-verification-overlay").style.display = "none";
-            }
-        });
-
         function confirmAge() {
-            localStorage.setItem("isAdultConfirmed", "true");
             document.getElementById("age-verification-overlay").style.display = "none";
         }
 

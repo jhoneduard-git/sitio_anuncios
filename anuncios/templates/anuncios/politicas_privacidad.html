@@ -1,0 +1,60 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Política de Privacidad y Protección de Datos</title>
+    <link rel="stylesheet" href="{% static 'anuncios/style.css' %}">
+    <style>
+        .contenedor-legal {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 30px;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            line-height: 1.6;
+            color: #333333;
+        }
+        .contenedor-legal h1 { color: #d9534f; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .contenedor-legal h2 { color: #2c3e50; margin-top: 25px; }
+    </style>
+</head>
+<body>
+    <main class="contenedor-legal">
+        <h1>Política de Privacidad y Protección de Datos Personales</h1>
+        <p><strong>Última actualización:</strong> Agosto de 2026</p>
+
+        <p>En cumplimiento de la Ley Estatutaria 1581 de 2012 de Protección de Datos Personales y el Decreto 1377 de 2013, garantizamos la confidencialidad y privacidad de la información recolectada en nuestra plataforma.</p>
+
+        <h2>1. Información que Recolectamos</h2>
+        <p>Para la correcta prestación del servicio de publicidad, recopilamos los siguientes datos:</p>
+        <ul>
+            <li><strong>Datos de Registro:</strong> Nombre de usuario, dirección de correo electrónico y contraseña encriptada.</li>
+            <li><strong>Datos de Anuncio:</strong> Contenido, imágenes, número de WhatsApp, usuario de Telegram e información de contacto comercial provista por el usuario.</li>
+            <li><strong>Datos Técnicos:</strong> Dirección IP, navegador y datos de geolocalización aproximada para determinar la tarifa de pago según la ubicación geográfica.</li>
+        </ul>
+
+        <h2>2. Finalidad del Tratamiento de Datos</h2>
+        <p>Los datos personales recabados serán utilizados para los siguientes fines exclusivos:</p>
+        <ul>
+            <li>Gestionar la creación y publicación de los anuncios publicitarios.</li>
+            <li>Verificar la autenticidad de las transacciones y procesar los pagos mediante la pasarela segura Wompi.</li>
+            <li>Garantizar el cumplimiento del requisito de mayoría de edad legal (🔞 +18).</li>
+            <li>Atender requerimientos judiciales de autoridades competentes en caso de investigaciones sobre delitos digitales.</li>
+        </ul>
+
+        <h2>3. Procesamiento de Pagos Seguros</h2>
+        <p>Nuestra plataforma <strong>no almacena</strong> ni procesa directamente datos sensibles de tarjetas de crédito o cuentas bancarias. Las transacciones de pago son gestionadas íntegramente por la pasarela autorizada Wompi bajo sus propios estándares internacionales de seguridad PCI-DSS.</p>
+
+        <h2>4. Derechos del Titular (Derechos ARCO)</h2>
+        <p>Como titular de los datos personales, el usuario tiene derecho a conocer, actualizar, rectificar y solicitar la supresión de sus datos personales de nuestras bases de datos en cualquier momento a través de la sección "Mis Anuncios" o contactando a la administración.</p>
+
+        <h2>5. Uso de Cookies y Almacenamiento Local</h2>
+        <p>Utilizamos cookies y tecnologías de almacenamiento local para mantener abierta la sesión del usuario y registrar las preferencias de navegación de forma segura.</p>
+
+        <p style="margin-top: 30px;"><a href="{% url 'inicio' %}" class="btn-buscar" style="text-decoration: none; padding: 10px 20px;">Volver al Inicio</a></p>
+    </main>
+</body>
+</html>

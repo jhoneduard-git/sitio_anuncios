@@ -1,0 +1,72 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Normas de Uso y Términos del Servicio</title>
+    <link rel="stylesheet" href="{% static 'anuncios/style.css' %}">
+    <style>
+        .contenedor-legal {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 30px;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            line-height: 1.6;
+            color: #333333;
+        }
+        .contenedor-legal h1 { color: #d9534f; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .contenedor-legal h2 { color: #2c3e50; margin-top: 25px; }
+        .alerta-edad {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-left: 5px solid #dc3545;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <main class="contenedor-legal">
+        <h1>Normas de Uso y Términos del Servicio</h1>
+        <p><strong>Última actualización:</strong> Agosto de 2026</p>
+
+        <div class="alerta-edad">
+            <strong>🔞 ADVERTENCIA EXCLUSIVA PARA MAYORES DE EDAD:</strong> Este sitio web está estrictamente reservado para personas mayores de 18 años (o la mayoría de edad legal en su jurisdicción). El acceso o uso por parte de menores de edad está rotundamente prohibido.
+        </div>
+
+        <h2>1. Aceptación de los Términos</h2>
+        <p>Al acceder, navegar o publicar anuncios en nuestra plataforma, el usuario declara ser mayor de edad y aceptar en su totalidad las presentes Normas de Uso. Si no está de acuerdo con alguno de estos términos, debe abandonar el sitio inmediatamente.</p>
+
+        <h2>2. Naturaleza del Servicio</h2>
+        <p>Esta plataforma actúa exclusivamente como un tablón de anuncios publicitarios en línea. No intermediamos, gestionamos, contratamos ni nos responsabilizamos por los acuerdos, transacciones o servicios pactados entre los anunciantes y los usuarios finales.</p>
+
+        <h2>3. Prohibición Cero a la Explotación Sexual e Infantil</h2>
+        <p>En estricto cumplimiento de la Ley 679 de 2001 y las normativas internacionales de protección al menor:</p>
+        <ul>
+            <li>Queda estrictamente prohibida la publicación de cualquier contenido, imagen o texto que involucre o sugiera la participación de menores de edad.</li>
+            <li>Cualquier intento de publicar material ilegal será reportado de inmediato a las autoridades policiales e internacionales correspondientes, suministrando la dirección IP y datos de registro del usuario.</li>
+        </ul>
+
+        <h2>4. Contenido Prohibido y Normas de Publicación</h2>
+        <p>Los anunciantes son legalmente responsables del contenido de sus publicaciones. Se prohíbe taxativamente:</p>
+        <ul>
+            <li>Anunciar actividades ilícitas, trata de personas, prostitución forzada o violencia.</li>
+            <li>Publicar fotografías de terceros sin su consentimiento explícito por escrito.</li>
+            <li>Usar lenguaje engañoso, difamatorio, de odio o que incite a la discriminación.</li>
+            <li>Ofrecer servicios médicos, sustancias controladas o fármacos sin prescripción.</li>
+        </ul>
+
+        <h2>5. Pagos, Tarifas y Publicación</h2>
+        <p>La publicación de anuncios está sujeta al pago previo de las tarifas vigentes según la ubicación geográfica del usuario. Los pagos procesados a través de la pasarela autorizada (Wompi) no son reembolsables una vez que el anuncio ha sido aprobado y publicado en la plataforma.</p>
+
+        <h2>6. Moderación y Cancelación de Cuenta</h2>
+        <p>La administración del sitio se reserva el derecho de revisar, suspender o eliminar cualquier anuncio o cuenta de usuario que infrinja estas normas, sin previo aviso y sin derecho a reembolso.</p>
+
+        <p style="margin-top: 30px;"><a href="{% url 'inicio' %}" class="btn-buscar" style="text-decoration: none; padding: 10px 20px;">Volver al Inicio</a></p>
+    </main>
+</body>
+</html>

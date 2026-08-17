@@ -1,49 +1,103 @@
-from django.db import models
-from django.contrib.auth.models import User
-from django.utils import timezone
 from datetime import timedelta
+from django.contrib.auth.models import User
+from django.db import models
+from django.utils import timezone
+
 
 # 1. CATEGORÍA
 class Categoria(models.Model):
-    nombre = models.CharField(max_length=100, verbose_name="Nombre de la Categoría")
+    nombre = models.CharField(
+        max_length=100, verbose_name="Nombre de la Categoría"
+    )
     slug = models.SlugField(unique=True, null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Categoría"
+        verbose_name_plural = "Categorías"
 
     def __str__(self):
         return self.nombre
 
 
-# 2. ANUNCIO (Con control de tiempo, vigencia y contactos)
+# --- CUSTOM MANAGER PARA FILTRAR EN LA VISTA DE INICIO ---
+class AnuncioActivoManager(models.Manager):
+    def vigentes(self):
+        """Retorna únicamente los anuncios pagados cuya fecha de vencimiento no ha expirado."""
+        ahora = timezone.now()
+        # Filtra anuncios pagados donde fecha_pago + dias_duracion sea mayor a la fecha actual
+        return self.filter(
+            pagado=True, fecha_pago__isnull=False
+        ).extra(
+            where=["fecha_pago + (dias_duracion || ' days')::interval > %s"],
+            params=[ahora],
+        ) if self.model._meta.database.startswith("post") else [
+            a for a in self.filter(pagado=True, fecha_pago__isnull=False) if a.esta_vigente
+        ]
+
+
+# 2. ANUNCIO
 class Anuncio(models.Model):
-    titulo = models.CharField(max_length=200, verbose_name="Título del Anuncio")
+    titulo = models.CharField(
+        max_length=200, verbose_name="Título del Anuncio"
+    )
     descripcion = models.TextField(verbose_name="Descripción")
-    precio = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Precio")
-    imagen = models.ImageField(upload_to='anuncios_fotos/', null=True, blank=True, verbose_name="Imagen Principal")
-    fecha_publicacion = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Creación")
-    
-    # 🆕 Campos de contacto directo (WhatsApp y Telegram)
+    precio = models.DecimalField(
+        max_digits=10, decimal_places=2, verbose_name="Precio"
+    )
+    imagen = models.ImageField(
+        upload_to="anuncios_fotos/",
+        null=True,
+        blank=True,
+        verbose_name="Imagen Principal",
+    )
+    fecha_publicacion = models.DateTimeField(
+        auto_now_add=True, verbose_name="Fecha de Creación"
+    )
+
+    # Campos de contacto directo
     whatsapp = models.CharField(
-        max_length=20, 
-        blank=True, 
-        null=True, 
+        max_length=20,
+        blank=True,
+        null=True,
         verbose_name="Número de WhatsApp",
-        help_text="Ejemplo: 573000000000"
+        help_text="Ejemplo: 573000000000",
     )
     telegram = models.CharField(
-        max_length=50, 
-        blank=True, 
-        null=True, 
+        max_length=50,
+        blank=True,
+        null=True,
         verbose_name="Usuario de Telegram",
-        help_text="Ejemplo: TuUsuarioTelegram (sin @)"
+        help_text="Ejemplo: TuUsuarioTelegram (sin @)",
     )
 
     # Sistema de Cobro y Tiempo de Publicación
     pagado = models.BooleanField(default=False, verbose_name="¿Está Pagado?")
-    fecha_pago = models.DateTimeField(null=True, blank=True, verbose_name="Fecha y Hora de Pago")
-    dias_duracion = models.IntegerField(default=30, verbose_name="Días de Duración")
-    
+    fecha_pago = models.DateTimeField(
+        null=True, blank=True, verbose_name="Fecha y Hora de Pago"
+    )
+    dias_duracion = models.IntegerField(
+        default=30, verbose_name="Días de Duración"
+    )
+
     # Relaciones de la base de datos
-    usuario = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Anunciante")
-    categoria = models.ForeignKey(Categoria, on_delete=models.PROTECT, related_name='anuncios', verbose_name="Categoría")
+    usuario = models.ForeignKey(
+        User, on_delete=models.CASCADE, verbose_name="Anunciante"
+    )
+    categoria = models.ForeignKey(
+        Categoria,
+        on_delete=models.PROTECT,
+        related_name="anuncios",
+        verbose_name="Categoría",
+    )
+
+    # Managers
+    objects = models.Manager()  # Manager por defecto
+    publicados = AnuncioActivoManager()  # Manager personalizado
+
+    class Meta:
+        verbose_name = "Anuncio"
+        verbose_name_plural = "Anuncios"
+        ordering = ["-fecha_publicacion"]
 
     def __str__(self):
         return self.titulo
@@ -66,19 +120,19 @@ class Anuncio(models.Model):
 
     @property
     def tiempo_publicado(self):
-        """Retorna cuánto tiempo lleva publicado en lenguaje natural (ej: '3 días' o '5 horas')."""
+        """Retorna cuánto tiempo lleva publicado en lenguaje natural."""
         if not self.fecha_pago:
             return "No publicado"
-        
+
         transcurrido = timezone.now() - self.fecha_pago
         dias = transcurrido.days
         if dias > 0:
             return f"{dias} día{'s' if dias > 1 else ''}"
-        
+
         horas = transcurrido.seconds // 3600
         if horas > 0:
             return f"{horas} hora{'s' if horas > 1 else ''}"
-            
+
         minutos = transcurrido.seconds // 60
         return f"{minutos} min"
 
@@ -87,24 +141,32 @@ class Anuncio(models.Model):
         """Retorna cuánto tiempo le queda disponible al anuncio."""
         if not self.esta_vigente:
             return "Vencido / Inactivo"
-        
+
         restante = self.fecha_vencimiento - timezone.now()
         dias = restante.days
         if dias > 0:
             return f"{dias} día{'s' if dias > 1 else ''}"
-        
+
         horas = restante.seconds // 3600
         if horas > 0:
             return f"{horas} hora{'s' if horas > 1 else ''}"
-            
+
         minutos = restante.seconds // 60
         return f"{minutos} min"
 
 
 # 3. IMÁGENES ADICIONALES
 class ImagenAnuncio(models.Model):
-    anuncio = models.ForeignKey(Anuncio, on_delete=models.CASCADE, related_name='imagenes_adicionales')
-    imagen = models.ImageField(upload_to='anuncios_fotos/')
+    anuncio = models.ForeignKey(
+        Anuncio,
+        on_delete=models.CASCADE,
+        related_name="imagenes_adicionales",
+    )
+    imagen = models.ImageField(upload_to="anuncios_fotos/")
+
+    class Meta:
+        verbose_name = "Imagen Adicional"
+        verbose_name_plural = "Imágenes Adicionales"
 
     def __str__(self):
         return f"Foto adicional de {self.anuncio.titulo}"
