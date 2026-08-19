@@ -140,13 +140,31 @@
     </footer>
 
     <script>
-        function confirmAge() {
-            document.getElementById("age-verification-overlay").style.display = "none";
-        }
+    document.addEventListener("DOMContentLoaded", function () {
+        const overlay = document.getElementById("age-verification-overlay");
 
-        function exitSite() {
-            window.location.href = "https://www.google.com";
+        // 1. Verificar si el usuario ya confirmó su edad en esta sesión
+        if (sessionStorage.getItem("ageConfirmed") === "true") {
+            if (overlay) {
+                overlay.style.display = "none";
+            }
         }
-    </script>
+    });
+
+    function confirmAge() {
+        // 2. Guardar en la sesión que el usuario ya es mayor de edad
+        sessionStorage.setItem("ageConfirmed", "true");
+        
+        // 3. Ocultar el aviso
+        const overlay = document.getElementById("age-verification-overlay");
+        if (overlay) {
+            overlay.style.display = "none";
+        }
+    }
+
+    function exitSite() {
+        window.location.href = "https://www.google.com";
+    }
+</script>
 </body>
 </html>

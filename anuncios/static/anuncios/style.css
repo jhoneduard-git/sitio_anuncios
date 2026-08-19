@@ -1093,3 +1093,14 @@ h1 {
 .age-legal-links span {
     color: #555555;
 }
+/* Color blanco para todos los enlaces del pie de página */
+.pie-pagina a {
+    color: #ffffff !important;
+    text-decoration: underline;
+    transition: color 0.3s ease;
+}
+
+/* Efecto opcional al pasar el cursor por encima */
+.pie-pagina a:hover {
+    color: #cccccc !important;
+}
