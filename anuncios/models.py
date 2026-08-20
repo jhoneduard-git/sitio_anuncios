@@ -1,7 +1,36 @@
 from datetime import timedelta
+from io import BytesIO
+import os
+
 from django.contrib.auth.models import User
+from django.core.files.base import ContentFile
 from django.db import models
 from django.utils import timezone
+from PIL import Image
+
+
+# Función auxiliar para convertir cualquier imagen a WebP
+def optimizar_e_convertir_webp(campo_imagen):
+    if not campo_imagen:
+        return campo_imagen
+
+    # Abrir la imagen subida con Pillow
+    img = Image.open(campo_imagen)
+
+    # Convertir imágenes con transparencias (PNG/RGBA) a RGB para evitar errores
+    if img.mode in ("RGBA", "P"):
+        img = img.convert("RGB")
+
+    output = BytesIO()
+    # Comprimir al 80% de calidad y optimizar
+    img.save(output, format="WEBP", quality=80, optimize=True)
+    output.seek(0)
+
+    # Cambiar la extensión del archivo a .webp
+    nombre_base = os.path.splitext(campo_imagen.name)[0]
+    nuevo_nombre = f"{nombre_base}.webp"
+
+    return ContentFile(output.read(), name=nuevo_nombre)
 
 
 # 1. CATEGORÍA
@@ -24,15 +53,20 @@ class AnuncioActivoManager(models.Manager):
     def vigentes(self):
         """Retorna únicamente los anuncios pagados cuya fecha de vencimiento no ha expirado."""
         ahora = timezone.now()
-        # Filtra anuncios pagados donde fecha_pago + dias_duracion sea mayor a la fecha actual
-        return self.filter(
-            pagado=True, fecha_pago__isnull=False
-        ).extra(
-            where=["fecha_pago + (dias_duracion || ' days')::interval > %s"],
-            params=[ahora],
-        ) if self.model._meta.database.startswith("post") else [
-            a for a in self.filter(pagado=True, fecha_pago__isnull=False) if a.esta_vigente
-        ]
+        return (
+            self.filter(
+                pagado=True, fecha_pago__isnull=False
+            ).extra(
+                where=["fecha_pago + (dias_duracion || ' days')::interval > %s"],
+                params=[ahora],
+            )
+            if self.model._meta.database.startswith("post")
+            else [
+                a
+                for a in self.filter(pagado=True, fecha_pago__isnull=False)
+                if a.esta_vigente
+            ]
+        )
 
 
 # 2. ANUNCIO
@@ -91,8 +125,8 @@ class Anuncio(models.Model):
     )
 
     # Managers
-    objects = models.Manager()  # Manager por defecto
-    publicados = AnuncioActivoManager()  # Manager personalizado
+    objects = models.Manager()
+    publicados = AnuncioActivoManager()
 
     class Meta:
         verbose_name = "Anuncio"
@@ -102,25 +136,27 @@ class Anuncio(models.Model):
     def __str__(self):
         return self.titulo
 
-    # --- CÁLCULOS DINÁMICOS DE TIEMPO Y VIGENCIA ---
+    # --- OPTIMIZACIÓN Y CONVERSIÓN A WEBP ---
+    def save(self, *args, **kwargs):
+        if self.imagen and not self.imagen.name.endswith(".webp"):
+            self.imagen = optimizar_e_convertir_webp(self.imagen)
+        super().save(*args, **kwargs)
 
+    # --- CÁLCULOS DINÁMICOS DE TIEMPO Y VIGENCIA ---
     @property
     def fecha_vencimiento(self):
-        """Calcula la fecha y hora exactas en que expira el anuncio."""
         if self.fecha_pago:
             return self.fecha_pago + timedelta(days=self.dias_duracion)
         return None
 
     @property
     def esta_vigente(self):
-        """Verifica si el anuncio está pagado y si aún no ha alcanzado la fecha de vencimiento."""
         if not self.pagado or not self.fecha_pago:
             return False
         return timezone.now() < self.fecha_vencimiento
 
     @property
     def tiempo_publicado(self):
-        """Retorna cuánto tiempo lleva publicado en lenguaje natural."""
         if not self.fecha_pago:
             return "No publicado"
 
@@ -138,7 +174,6 @@ class Anuncio(models.Model):
 
     @property
     def tiempo_restante(self):
-        """Retorna cuánto tiempo le queda disponible al anuncio."""
         if not self.esta_vigente:
             return "Vencido / Inactivo"
 
@@ -170,3 +205,8 @@ class ImagenAnuncio(models.Model):
 
     def __str__(self):
         return f"Foto adicional de {self.anuncio.titulo}"
+
+    def save(self, *args, **kwargs):
+        if self.imagen and not self.imagen.name.endswith(".webp"):
+            self.imagen = optimizar_e_convertir_webp(self.imagen)
+        super().save(*args, **kwargs)

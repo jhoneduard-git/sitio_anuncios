@@ -12,7 +12,7 @@
     <!-- Encabezado Sincronizado con Autenticación -->
     <header class="header-sitio">
         <div class="contenedor-header">
-            <a href="{% url 'inicio' %}" class="logo">📢 ClasificadosApp</a>
+            <a href="{% url 'inicio' %}" class="logo">📢 Mi Sitio de Anuncios Sexuales</a>
             <nav class="menu-navegacion">
                 <a href="{% url 'inicio' %}" class="link-nav">Inicio</a>
                 
@@ -105,8 +105,12 @@
     </main>
 
     <!-- Footer -->
-    <footer style="background-color: #2c3e50; color: white; text-align: center; padding: 20px; margin-top: 60px;">
+    <footer class="pie-pagina">
         <p>&copy; 2026 ClasificadosApp. Todos los derechos reservados.</p>
+        <p>
+            <a href="{% url 'normas_uso' %}" target="_blank">Información y reglas de uso</a> | 
+            <a href="{% url 'politicas_privacidad' %}" target="_blank">Políticas de privacidad</a>
+        </p>
     </footer>
 
 </body>
