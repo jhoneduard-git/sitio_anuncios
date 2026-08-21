@@ -2,6 +2,7 @@ import hashlib
 import re
 import uuid
 
+import requests
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
@@ -17,9 +18,8 @@ from django.views.decorators.http import (
     require_http_methods,
     require_POST,
 )
-import requests
+
 from .models import Anuncio, Categoria, ImagenAnuncio
-import requests
 
 # funcion para obtener la IP del cliente saber si es local o extranjero, para mostrar el precio en pesos o dolares
 def obtener_ip_cliente(request):
@@ -30,6 +30,108 @@ def obtener_ip_cliente(request):
     else:
         ip = request.META.get("REMOTE_ADDR")
     return ip
+
+
+def obtener_pais_por_ip(ip_cliente):
+    """Obtiene el código de país usando una conexión HTTPS."""
+    try:
+        respuesta = requests.get(
+            f"https://ipapi.co/{ip_cliente}/json/",
+            timeout=3,
+        )
+        if respuesta.status_code == 200:
+            return respuesta.json().get("country_code", "CO")
+    except (requests.RequestException, ValueError):
+        pass
+    return "CO"
+
+
+def validar_firma_wompi(data):
+    """Valida la firma de integridad de una transacción de Wompi."""
+    checksum_recibido = (
+        data.get("signature", {}).get("checksum")
+        or data.get("checksum")
+    )
+    integrity_secret = str(
+        getattr(settings, "WOMPI_INTEGRITY_SECRET", "")
+    ).strip()
+
+    if not checksum_recibido or not integrity_secret:
+        return True
+
+    cadena_local = (
+        f"{data.get('reference', '')}"
+        f"{data.get('amount_in_cents')}"
+        f"{data.get('currency')}"
+        f"{integrity_secret}"
+    )
+    checksum_calculado = hashlib.sha256(
+        cadena_local.encode("utf-8")
+    ).hexdigest()
+    return checksum_calculado.lower() == str(checksum_recibido).lower()
+
+
+def obtener_anuncio_de_referencia(referencia):
+    """Extrae el anuncio asociado a una referencia de pago."""
+    match = re.search(r"ANUNCIO-(\d+)", referencia)
+    if not match:
+        return None
+
+    try:
+        return Anuncio.objects.get(pk=match.group(1))
+    except Anuncio.DoesNotExist:
+        return None
+
+
+def procesar_estado_pago(anuncio, estado):
+    """Actualiza el anuncio y devuelve el nivel y mensaje para Django."""
+    if estado == "APPROVED":
+        if anuncio.pagado:
+            return "info", f"El anuncio '{anuncio.titulo}' ya se encuentra activo."
+
+        with transaction.atomic():
+            anuncio.pagado = True
+            anuncio.fecha_pago = timezone.now()
+            anuncio.save(update_fields=["pagado", "fecha_pago"])
+        return (
+            "success",
+            f"¡Pago aprobado con éxito! Tu anuncio '{anuncio.titulo}' ya está publicado.",
+        )
+
+    if estado == "PENDING":
+        return (
+            "info",
+            "El pago está en proceso de verificación por la entidad bancaria.",
+        )
+
+    return "warning", f"El pago no se pudo completar. Estado: {estado}"
+
+
+def agregar_mensaje_pago(request, nivel, mensaje):
+    getattr(messages, nivel)(request, mensaje)
+
+
+def crear_anuncio_desde_request(request):
+    """Crea un anuncio y sus imágenes adicionales desde un formulario POST."""
+    categoria = get_object_or_404(
+        Categoria,
+        pk=request.POST.get("categoria"),
+    )
+    anuncio = Anuncio.objects.create(
+        titulo=request.POST.get("titulo"),
+        descripcion=request.POST.get("descripcion"),
+        precio=request.POST.get("precio"),
+        categoria=categoria,
+        imagen=request.FILES.get("imagen"),
+        whatsapp=request.POST.get("whatsapp", "").strip(),
+        telegram=request.POST.get("telegram", "").strip(),
+        usuario=request.user,
+        pagado=False,
+    )
+
+    for foto in request.FILES.getlist("imagenes_adicionales"):
+        ImagenAnuncio.objects.create(anuncio=anuncio, imagen=foto)
+    return anuncio
 
 # ==============================================================================
 # 1. PÁGINA DE INICIO (Solo GET)
@@ -82,7 +184,7 @@ def pagina_inicio(request):
 # ==============================================================================
 @require_GET
 def detalle_anuncio(request, id):
-    anuncio_encontrado = get_object_or_404(Anuncio, id=id)
+    anuncio_encontrado = get_object_or_404(Anuncio, pk=id)
     fotos_adicionales = anuncio_encontrado.imagenes_adicionales.all()
 
     contexto = {
@@ -99,34 +201,8 @@ def detalle_anuncio(request, id):
 @require_http_methods(["GET", "POST"])
 def crear_anuncio(request):
     if request.method == "POST":
-        titulo = request.POST.get("titulo")
-        descripcion = request.POST.get("descripcion")
-        precio = request.POST.get("precio")
-        categoria_id = request.POST.get("categoria")
-        imagen = request.FILES.get("imagen")
-
-        whatsapp = request.POST.get("whatsapp", "").strip()
-        telegram = request.POST.get("telegram", "").strip()
-
-        categoria = get_object_or_404(Categoria, id=categoria_id)
-
-        nuevo_anuncio = Anuncio.objects.create(
-            titulo=titulo,
-            descripcion=descripcion,
-            precio=precio,
-            categoria=categoria,
-            imagen=imagen,
-            whatsapp=whatsapp,
-            telegram=telegram,
-            usuario=request.user,
-            pagado=False,
-        )
-
-        fotos_adicionales = request.FILES.getlist("imagenes_adicionales")
-        for foto in fotos_adicionales:
-            ImagenAnuncio.objects.create(anuncio=nuevo_anuncio, imagen=foto)
-
-        return redirect("pasarela_pago", anuncio_id=nuevo_anuncio.id)
+        anuncio = crear_anuncio_desde_request(request)
+        return redirect("pasarela_pago", anuncio_id=anuncio.pk)
 
     categorias = Categoria.objects.all()
     return render(
@@ -140,21 +216,11 @@ def crear_anuncio(request):
 @login_required
 @require_GET
 def pasarela_pago(request, anuncio_id):
-    anuncio = get_object_or_404(Anuncio, id=anuncio_id, usuario=request.user)
+    anuncio = get_object_or_404(Anuncio, pk=anuncio_id, usuario=request.user)
 
     # 1. Detectar ubicación por IP
     ip_cliente = obtener_ip_cliente(request)
-    pais_codigo = "CO"  # Por defecto Colombia
-
-    try:
-        res = requests.get(
-            f"http://ip-api.com/json/{ip_cliente}?fields=countryCode",
-            timeout=3,
-        )
-        if res.status_code == 200:
-            pais_codigo = res.json().get("countryCode", "CO")
-    except requests.RequestException:
-        pass
+    pais_codigo = obtener_pais_por_ip(ip_cliente)
 
     # 2. Asignar tarifa según el país (Siempre en COP)
     if pais_codigo == "CO":
@@ -168,7 +234,7 @@ def pasarela_pago(request, anuncio_id):
     # 3. Referencia única de pago
     codigo_unico = uuid.uuid4().hex[:6]
     referencia_pago = (
-        f"ANUNCIO-{anuncio.id}-{anuncio.usuario.id}-{codigo_unico}"
+        f"ANUNCIO-{anuncio.pk}-{anuncio.usuario.pk}-{codigo_unico}"
     )
 
     # 4. Firmado SHA-256 de Wompi
@@ -202,7 +268,9 @@ def pasarela_pago(request, anuncio_id):
 # ==============================================================================
 @require_GET
 def respuesta_pago(request):
-    id_transaccion = request.GET.get("id") or request.GET.get("transaction_id")
+    id_transaccion = request.GET.get("id") or request.GET.get(
+        "transaction_id"
+    )
 
     if not id_transaccion:
         messages.error(
@@ -212,7 +280,7 @@ def respuesta_pago(request):
 
     pub_key = str(getattr(settings, "WOMPI_PUBLIC_KEY", "")).strip()
     base_url = (
-        "https://checkout.wompi.co/v1"
+        "https://production.wompi.co/v1"
         if pub_key.startswith("pub_prod_")
         else "https://sandbox.wompi.co/v1"
     )
@@ -225,48 +293,23 @@ def respuesta_pago(request):
         if response.status_code == 200:
             data = response.json().get("data", {})
             estado = data.get("status")
-            referencia = data.get("reference", "")
-
-            # Extracción segura del ID con Expresión Regular
-            match = re.search(r"ANUNCIO-(\d+)", referencia)
-            if not match:
+            if not validar_firma_wompi(data):
                 messages.error(
                     request,
-                    "La referencia de pago recibida no tiene un formato válido.",
+                    "Violación de integridad: La firma de la transacción no coincide.",
                 )
                 return redirect("mis_anuncios")
 
-            anuncio_id = match.group(1)
-
-            try:
-                anuncio = Anuncio.objects.get(id=anuncio_id)
-            except Anuncio.DoesNotExist:
+            anuncio = obtener_anuncio_de_referencia(data.get("reference", ""))
+            if anuncio is None:
                 messages.error(
                     request,
                     "No se encontró el anuncio asociado a este pago.",
                 )
                 return redirect("mis_anuncios")
 
-            # Actualización atómica en base de datos al aprobar el pago
-            if estado == "APPROVED":
-                with transaction.atomic():
-                    anuncio.pagado = True
-                    anuncio.fecha_pago = timezone.now()
-                    anuncio.save()
-
-                messages.success(
-                    request,
-                    f"¡Pago aprobado con éxito! Tu anuncio '{anuncio.titulo}' ya está publicado.",
-                )
-            elif estado == "PENDING":
-                messages.info(
-                    request,
-                    "El pago está en proceso de verificación por la entidad bancaria.",
-                )
-            else:
-                messages.warning(
-                    request, f"El pago no se pudo completar. Estado: {estado}"
-                )
+            nivel, mensaje = procesar_estado_pago(anuncio, estado)
+            agregar_mensaje_pago(request, nivel, mensaje)
 
             return render(
                 request,
@@ -280,8 +323,7 @@ def respuesta_pago(request):
         )
 
     return redirect("mis_anuncios")
-
-
+          
 # ==============================================================================
 # 6. REGISTRO DE USUARIOS (GET / POST)
 # ==============================================================================
@@ -306,7 +348,7 @@ def registrar_usuario(request):
 @require_GET
 def mis_anuncios(request):
     anuncios_usuario = Anuncio.objects.filter(usuario=request.user).order_by(
-        "-id"
+        "-pk"
     )
     return render(
         request, "anuncios/mis_anuncios.html", {"anuncios": anuncios_usuario}
@@ -320,7 +362,7 @@ def mis_anuncios(request):
 @require_http_methods(["GET", "POST"])
 def editar_anuncio(request, id):
     anuncio = get_object_or_404(
-        Anuncio, id=id, usuario=request.user, pagado=True
+        Anuncio, pk=id, usuario=request.user, pagado=True
     )
 
     if request.method == "POST":
@@ -332,7 +374,7 @@ def editar_anuncio(request, id):
 
         categoria_id = request.POST.get("categoria")
         if categoria_id:
-            anuncio.categoria = get_object_or_404(Categoria, id=categoria_id)
+            anuncio.categoria = get_object_or_404(Categoria, pk=categoria_id)
 
         if request.FILES.get("imagen"):
             anuncio.imagen = request.FILES.get("imagen")
@@ -363,9 +405,9 @@ def editar_anuncio(request, id):
 @require_POST
 def eliminar_foto(request, foto_id):
     foto = get_object_or_404(
-        ImagenAnuncio, id=foto_id, anuncio__usuario=request.user
+        ImagenAnuncio, pk=foto_id, anuncio__usuario=request.user
     )
-    anuncio_id = foto.anuncio.id
+    anuncio_id = foto.anuncio.pk
     foto.delete()
     return redirect("editar_anuncio", id=anuncio_id)
 

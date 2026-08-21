@@ -7,6 +7,7 @@ from django.core.files.base import ContentFile
 from django.db import models
 from django.utils import timezone
 from PIL import Image
+from django.db.models import Manager
 
 
 # Función auxiliar para convertir cualquier imagen a WebP
@@ -71,6 +72,10 @@ class AnuncioActivoManager(models.Manager):
 
 # 2. ANUNCIO
 class Anuncio(models.Model):
+    # --- AYUDA DE TIPO PARA PYLANCE EN VS CODE ---
+    imagenes_adicionales: Manager["ImagenAnuncio"]
+
+    # Tus campos actuales...
     titulo = models.CharField(
         max_length=200, verbose_name="Título del Anuncio"
     )
@@ -148,12 +153,18 @@ class Anuncio(models.Model):
         if self.fecha_pago:
             return self.fecha_pago + timedelta(days=self.dias_duracion)
         return None
-
+    
     @property
-    def esta_vigente(self):
-        if not self.pagado or not self.fecha_pago:
+    def esta_vigente(self) -> bool:
+        if not self.pagado or self.fecha_pago is None:
             return False
-        return timezone.now() < self.fecha_vencimiento
+
+        fecha_vencimiento = self.fecha_vencimiento
+
+        if fecha_vencimiento is None:
+            return False
+
+        return timezone.now() < fecha_vencimiento
 
     @property
     def tiempo_publicado(self):
@@ -173,16 +184,23 @@ class Anuncio(models.Model):
         return f"{minutos} min"
 
     @property
-    def tiempo_restante(self):
+    def tiempo_restante(self) -> str:
         if not self.esta_vigente:
             return "Vencido / Inactivo"
 
-        restante = self.fecha_vencimiento - timezone.now()
+        fecha_vencimiento = self.fecha_vencimiento
+
+        if fecha_vencimiento is None:
+            return "Vencido / Inactivo"
+
+        restante = fecha_vencimiento - timezone.now()
         dias = restante.days
+
         if dias > 0:
             return f"{dias} día{'s' if dias > 1 else ''}"
 
         horas = restante.seconds // 3600
+
         if horas > 0:
             return f"{horas} hora{'s' if horas > 1 else ''}"
 
